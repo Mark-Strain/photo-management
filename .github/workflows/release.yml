@@ -16,14 +16,23 @@ on:
         required: false
         type: string
         default: ''
+      build_windows:
+        description: 'Build for Windows'
+        required: false
+        type: boolean
+        default: true
+      build_macos:
+        description: 'Build for macOS'
+        required: false
+        type: boolean
+        default: true
 
 jobs:
-  build:
-    name: Build ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [windows-latest, macos-latest]
+  build-windows:
+    name: Build Windows
+    runs-on: windows-latest
+    timeout-minutes: 120
+    if: ${{ github.event.inputs.build_windows == 'true' }}
     
     steps:
       - name: Checkout code
@@ -42,17 +51,15 @@ jobs:
         run: npm run build:prod
 
       - name: Package for Windows
-        if: matrix.os == 'windows-latest'
+        timeout-minutes: 90
         run: npm run package:win
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
-
-      - name: Package for macOS
-        if: matrix.os == 'macos-latest'
-        run: npm run package:mac
+          ELECTRON_BUILDER_CACHE: ${{ runner.temp }}/electron-builder-cache
+          ELECTRON_CACHE: ${{ runner.temp }}/electron-cache
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload Windows artifacts
-        if: matrix.os == 'windows-latest'
         uses: actions/upload-artifact@v4
         with:
           name: windows-release
@@ -60,8 +67,37 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
+  build-macos:
+    name: Build macOS
+    runs-on: macos-latest
+    timeout-minutes: 120
+    if: ${{ github.event.inputs.build_macos == 'true' }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build application
+        run: npm run build:prod
+
+      - name: Package for macOS
+        timeout-minutes: 90
+        run: npm run package:mac
+        env:
+          ELECTRON_BUILDER_CACHE: ${{ runner.temp }}/electron-builder-cache
+          ELECTRON_CACHE: ${{ runner.temp }}/electron-cache
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Upload macOS artifacts
-        if: matrix.os == 'macos-latest'
         uses: actions/upload-artifact@v4
         with:
           name: macos-release
@@ -71,7 +107,8 @@ jobs:
 
   create-release:
     name: Create GitHub Release
-    needs: build
+    needs: [build-windows, build-macos]
+    if: always() && (needs.build-windows.result == 'success' || needs.build-macos.result == 'success')
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -83,12 +120,14 @@ jobs:
           fetch-depth: 0
 
       - name: Download Windows artifacts
+        if: ${{ github.event.inputs.build_windows == 'true' && needs.build-windows.result == 'success' }}
         uses: actions/download-artifact@v4
         with:
           name: windows-release
           path: ./artifacts/windows
 
       - name: Download macOS artifacts
+        if: ${{ github.event.inputs.build_macos == 'true' && needs.build-macos.result == 'success' }}
         uses: actions/download-artifact@v4
         with:
           name: macos-release
@@ -115,32 +154,55 @@ jobs:
 
       - name: Prepare release files
         run: |
-          # Copy Windows files
           mkdir -p release-files
-          find artifacts/windows -type f \( -name "*.exe" -o -name "*.blockmap" \) -exec cp {} release-files/ \;
-          # Copy macOS files
-          find artifacts/macos -type f \( -name "*.dmg" -o -name "*.blockmap" \) -exec cp {} release-files/ \;
+          # Copy Windows files if they exist
+          if [ -d "artifacts/windows" ] && [ "$(ls -A artifacts/windows 2>/dev/null)" ]; then
+            find artifacts/windows -type f \( -name "*.exe" -o -name "*.blockmap" \) -exec cp {} release-files/ \;
+          fi
+          # Copy macOS files if they exist
+          if [ -d "artifacts/macos" ] && [ "$(ls -A artifacts/macos 2>/dev/null)" ]; then
+            find artifacts/macos -type f \( -name "*.dmg" -o -name "*.blockmap" \) -exec cp {} release-files/ \;
+          fi
           echo "Release files prepared:"
-          ls -lh release-files/
+          ls -lh release-files/ || echo "No release files found"
+
+      - name: Generate release body
+        id: release_body
+        run: |
+          {
+            echo "## Release ${{ github.event.inputs.version }}"
+            echo ""
+            echo "${{ github.event.inputs.release_notes }}"
+            echo ""
+            echo "### Downloads"
+            echo ""
+            if [ "${{ github.event.inputs.build_windows }}" == "true" ]; then
+              echo "**Windows:**"
+              echo ""
+              echo "- Installer: \`Photo Management Setup ${{ github.event.inputs.version }}.exe\`"
+              echo "- Portable: \`Photo Management ${{ github.event.inputs.version }}.exe\`"
+              echo ""
+            fi
+            if [ "${{ github.event.inputs.build_macos }}" == "true" ]; then
+              echo "**macOS:**"
+              echo ""
+              echo "- DMG: \`Photo Management-${{ github.event.inputs.version }}.dmg\`"
+              echo ""
+            fi
+          } > release_body.txt
+          
+          {
+            echo "body<<EOF"
+            cat release_body.txt
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ github.event.inputs.tag }}
           name: Release ${{ github.event.inputs.version }}
-          body: |
-            ## Release ${{ github.event.inputs.version }}
-            
-            ${{ github.event.inputs.release_notes }}
-            
-            ### Downloads
-            
-            **Windows:**
-            - Installer: `Photo Management Setup ${{ github.event.inputs.version }}.exe`
-            - Portable: `Photo Management ${{ github.event.inputs.version }}.exe`
-            
-            **macOS:**
-            - DMG: `Photo Management-${{ github.event.inputs.version }}.dmg`
+          body: ${{ steps.release_body.outputs.body }}
           files: release-files/*
           draft: false
           prerelease: false
