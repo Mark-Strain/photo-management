@@ -155,13 +155,22 @@ jobs:
       - name: Prepare release files
         run: |
           mkdir -p release-files
-          # Copy Windows files if they exist
+          # Copy Windows files if they exist - only include installer, portable, and blockmap files
           if [ -d "artifacts/windows" ] && [ "$(ls -A artifacts/windows 2>/dev/null)" ]; then
-            find artifacts/windows -type f \( -name "*.exe" -o -name "*.blockmap" \) -exec cp {} release-files/ \;
+            # Find all exe and blockmap files, excluding elevate.exe and files in subdirectories
+            find artifacts/windows -type f \( -name "*.exe" -o -name "*.blockmap" \) ! -name "elevate.exe" ! -path "*/win-unpacked/*" ! -path "*/mac/*" ! -path "*/mac-arm64/*" | while read file; do
+              filename=$(basename "$file")
+              # Only copy Setup installer, portable exe (with version number like Photo.Management.1.0.0.exe), and blockmap files
+              if [[ "$filename" == *"Setup"* ]] || [[ "$filename" =~ ^Photo\.Management\.[0-9] ]] || [[ "$filename" == *.blockmap ]]; then
+                cp "$file" release-files/
+              fi
+            done
           fi
           # Copy macOS files if they exist
           if [ -d "artifacts/macos" ] && [ "$(ls -A artifacts/macos 2>/dev/null)" ]; then
-            find artifacts/macos -type f \( -name "*.dmg" -o -name "*.blockmap" \) -exec cp {} release-files/ \;
+            find artifacts/macos -type f \( -name "*.dmg" -o -name "*.blockmap" \) ! -path "*/mac/*" ! -path "*/mac-arm64/*" | while read file; do
+              cp "$file" release-files/
+            done
           fi
           echo "Release files prepared:"
           ls -lh release-files/ || echo "No release files found"
@@ -179,14 +188,15 @@ jobs:
             if [ "${{ github.event.inputs.build_windows }}" == "true" ]; then
               echo "**Windows:**"
               echo ""
-              echo "- Installer: \`Photo Management Setup ${{ github.event.inputs.version }}.exe\`"
-              echo "- Portable: \`Photo Management ${{ github.event.inputs.version }}.exe\`"
+              echo "- Installer: \`Photo.Management.Setup.${{ github.event.inputs.version }}.exe\`"
+              echo "- Portable: \`Photo.Management.${{ github.event.inputs.version }}.exe\`"
               echo ""
             fi
             if [ "${{ github.event.inputs.build_macos }}" == "true" ]; then
               echo "**macOS:**"
               echo ""
-              echo "- DMG: \`Photo Management-${{ github.event.inputs.version }}.dmg\`"
+              echo "- DMG: \`Photo.Management-${{ github.event.inputs.version }}.dmg\` (Intel)"
+              echo "- DMG: \`Photo.Management-${{ github.event.inputs.version }}-arm64.dmg\` (Apple Silicon)"
               echo ""
             fi
           } > release_body.txt
