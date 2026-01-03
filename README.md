@@ -9,8 +9,6 @@
 
 ![Screenshot](screenshots/app-screenshot.png)
 
-> **Note:** To add a screenshot, place an image file named `app-screenshot.png` in the `screenshots/` directory. The recommended size is 1280x720 pixels or similar aspect ratio.
-
 ---
 
 ## Table of Contents
@@ -91,14 +89,6 @@ Photo Management is built with modern technologies to provide a fast, reliable, 
 | **Google Photos API** | [googleapis](https://github.com/googleapis/google-api-nodejs-client) |
 | **Build Tools** | Webpack 5, TypeScript Compiler |
 | **Packaging** | [electron-builder](https://www.electron.build/) |
-
----
-
-## Screenshots
-
-![Application Screenshot](screenshots/app-screenshot.png)
-
-> **Adding Screenshots:** To add screenshots of the application, place image files in the `screenshots/` directory and reference them here. Recommended formats: PNG or JPG. Recommended size: 1280x720 pixels or similar aspect ratio.
 
 ---
 
