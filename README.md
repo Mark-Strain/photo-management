@@ -5,6 +5,10 @@ A desktop photo management application built with Electron that allows users to:
 - Tag photos with custom tags (e.g., who is in the photo)
 - Search for photos by tags
 
+## Disclaimer
+
+This application was built using AI assistance. While the code has been reviewed and tested, please be aware that AI-generated code may contain errors or require further refinement.
+
 ## Setup
 
 1. Install dependencies:
