@@ -1,0 +1,28 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle -->
+  <circle cx="256" cy="256" r="240" fill="#4A90E2" stroke="#357ABD" stroke-width="8"/>
+  
+  <!-- Photo frame -->
+  <rect x="120" y="140" width="272" height="200" rx="8" fill="#FFFFFF" stroke="#2C5F8F" stroke-width="6"/>
+  
+  <!-- Photo image (mountain landscape) -->
+  <rect x="130" y="150" width="252" height="140" fill="#E8F4F8"/>
+  <!-- Sky gradient effect -->
+  <rect x="130" y="150" width="252" height="80" fill="#87CEEB"/>
+  <!-- Mountains -->
+  <polygon points="130,230 200,180 270,200 340,160 382,230 382,290 130,290" fill="#5A9"/>
+  <polygon points="200,230 250,200 320,220 382,230 382,290 200,290" fill="#4A8"/>
+  <!-- Sun -->
+  <circle cx="320" cy="190" r="25" fill="#FFD700"/>
+  
+  <!-- Tag/label on photo -->
+  <rect x="140" y="300" width="80" height="25" rx="4" fill="#FF6B6B"/>
+  <text x="180" y="317" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="white" text-anchor="middle">TAG</text>
+  
+  <!-- Camera icon overlay (small) -->
+  <circle cx="350" cy="200" r="35" fill="#FFFFFF" opacity="0.9"/>
+  <circle cx="350" cy="200" r="25" fill="#4A90E2"/>
+  <circle cx="350" cy="200" r="15" fill="#FFFFFF"/>
+  <rect x="340" y="175" width="20" height="8" rx="2" fill="#FFFFFF"/>
+</svg>
+

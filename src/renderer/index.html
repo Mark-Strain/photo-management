@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Photo Management</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div class="app-container">
+    <header class="app-header">
+      <h1>Photo Management</h1>
+    </header>
+
+    <nav class="main-nav">
+      <button id="gallery-tab" class="nav-button active">Gallery</button>
+      <button id="search-tab" class="nav-button">Search</button>
+    </nav>
+
+    <main class="main-content">
+      <!-- Gallery Section -->
+      <section id="gallery-section" class="content-section active">
+        <!-- Import Controls -->
+        <div class="gallery-import-section">
+          <div class="import-section-header">
+            <h3>Import Photos</h3>
+            <button id="toggle-import-section" class="toggle-import-button" title="Toggle import section">
+              <span class="toggle-icon">▼</span>
+            </button>
+          </div>
+          <div class="import-section-content">
+            <div class="album-selection">
+            <label for="album-select">Add to Album (optional):</label>
+            <div class="album-select-container">
+              <select id="album-select" class="album-select">
+                <option value="">-- No Album --</option>
+              </select>
+              <button id="create-album-btn" class="create-album-button">Create New Album</button>
+            </div>
+            <div id="new-album-input-container" class="new-album-input-container" style="display: none;">
+              <input type="text" id="new-album-name" placeholder="Album name..." class="new-album-input">
+              <button id="confirm-album-btn" class="confirm-album-button">Create</button>
+              <button id="cancel-album-btn" class="cancel-album-button">Cancel</button>
+            </div>
+          </div>
+          <div class="import-options">
+            <button id="import-files-btn" class="import-button">
+              Import Files
+            </button>
+            <button id="import-folder-btn" class="import-button">
+              Import Folder
+            </button>
+            <button id="import-google-btn" class="import-button" disabled>
+              Import from Google Photos
+            </button>
+          </div>
+          <div id="import-progress-container" class="import-progress-container" style="display: none;">
+            <div class="progress-bar-wrapper">
+              <div id="import-progress-bar" class="progress-bar"></div>
+            </div>
+            <div id="import-progress-text" class="progress-text"></div>
+          </div>
+          <div id="import-status" class="status-message"></div>
+          </div>
+        </div>
+        <div class="gallery-header">
+          <h2 id="gallery-title">Photo Gallery</h2>
+          <div class="gallery-header-actions">
+            <button id="back-to-albums-btn" class="back-button" style="display: none;">← Back to Albums</button>
+            <button id="bulk-delete-btn" class="bulk-delete-button" style="display: none;">Delete Selected</button>
+            <button id="select-all-btn" class="select-all-button" style="display: none;">Select All</button>
+            <button id="deselect-all-btn" class="deselect-all-button" style="display: none;">Deselect All</button>
+          </div>
+        </div>
+        <div id="albums-grid" class="albums-grid"></div>
+        <div id="gallery-grid" class="gallery-grid"></div>
+        <div id="gallery-status" class="status-message"></div>
+      </section>
+
+      <!-- Search Section -->
+      <section id="search-section" class="content-section">
+        <!-- Search Controls -->
+        <div class="search-options-section">
+          <div class="search-section-header">
+            <h3>Search Options</h3>
+            <div class="search-header-actions">
+              <button id="export-results-btn" class="export-button" style="display: none;">Export Results as ZIP</button>
+              <button id="toggle-search-section" class="toggle-search-button" title="Toggle search options">
+                <span class="toggle-icon">▼</span>
+              </button>
+            </div>
+          </div>
+          <div class="search-section-content">
+            <div class="search-controls">
+              <div class="tag-selector">
+                <label for="tag-input">Select Tags:</label>
+                <div id="tag-list" class="tag-list"></div>
+                <input type="text" id="tag-input" placeholder="Type to search tags...">
+                <div id="tag-suggestions" class="tag-suggestions"></div>
+              </div>
+              <button id="search-btn" class="search-button">Search</button>
+              <button id="clear-search-btn" class="search-button">Clear</button>
+            </div>
+            <div id="selected-tags" class="selected-tags"></div>
+          </div>
+        </div>
+        <div class="search-results-header" style="display: none;">
+          <button id="search-bulk-delete-btn" class="bulk-delete-button">Delete Selected</button>
+          <button id="search-select-all-btn" class="select-all-button">Select All</button>
+          <button id="search-deselect-all-btn" class="deselect-all-button">Deselect All</button>
+        </div>
+        <div id="search-results" class="gallery-grid"></div>
+        <div id="search-status" class="status-message"></div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Image Modal -->
+  <div id="image-modal" class="modal">
+    <span class="modal-close">&times;</span>
+    <button id="modal-prev-btn" class="modal-nav-button modal-nav-prev" title="Previous (←)">‹</button>
+    <button id="modal-next-btn" class="modal-nav-button modal-nav-next" title="Next (→)">›</button>
+    <img id="modal-image" class="modal-image" src="" alt="">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="modal-filename"></h3>
+        <button id="modal-delete-btn" class="delete-button">Delete Photo</button>
+      </div>
+      <div id="modal-tags" class="modal-tags"></div>
+      <div class="tag-input-container">
+        <input type="text" id="modal-tag-input" placeholder="Add tag...">
+        <div id="modal-tag-suggestions" class="tag-suggestions"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bulk Delete Preview Modal -->
+  <div id="bulk-delete-preview-modal" class="modal">
+    <div class="modal-content preview-modal-content">
+      <div class="preview-modal-header">
+        <div>
+          <h2>Delete Selected Images</h2>
+          <p class="preview-count">You are about to delete <span id="preview-count">0</span> image(s). Click on images to unselect them.</p>
+        </div>
+        <span class="modal-close" id="preview-modal-close">&times;</span>
+      </div>
+      <div class="preview-modal-body">
+        <div id="preview-images-grid" class="preview-images-grid"></div>
+      </div>
+      <div class="preview-modal-footer">
+        <button id="preview-cancel-btn" class="preview-cancel-button">Cancel</button>
+        <button id="preview-delete-btn" class="preview-delete-button">Delete Selected</button>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+
