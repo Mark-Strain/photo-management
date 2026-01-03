@@ -1,0 +1,148 @@
+name: Build Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g., 1.0.0)'
+        required: true
+        type: string
+      tag:
+        description: 'Git tag name (e.g., v1.0.0)'
+        required: true
+        type: string
+      release_notes:
+        description: 'Release notes'
+        required: false
+        type: string
+        default: ''
+
+jobs:
+  build:
+    name: Build ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [windows-latest, macos-latest]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build application
+        run: npm run build:prod
+
+      - name: Package for Windows
+        if: matrix.os == 'windows-latest'
+        run: npm run package:win
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+
+      - name: Package for macOS
+        if: matrix.os == 'macos-latest'
+        run: npm run package:mac
+
+      - name: Upload Windows artifacts
+        if: matrix.os == 'windows-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-release
+          path: release/
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload macOS artifacts
+        if: matrix.os == 'macos-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-release
+          path: release/
+          if-no-files-found: error
+          retention-days: 30
+
+  create-release:
+    name: Create GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download Windows artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-release
+          path: ./artifacts/windows
+
+      - name: Download macOS artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: macos-release
+          path: ./artifacts/macos
+
+      - name: Create Git tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          # Check if tag already exists
+          if git rev-parse "${{ github.event.inputs.tag }}" >/dev/null 2>&1; then
+            echo "Tag ${{ github.event.inputs.tag }} already exists. Skipping tag creation."
+          else
+            git tag -a "${{ github.event.inputs.tag }}" -m "Release ${{ github.event.inputs.version }}"
+            git push origin "${{ github.event.inputs.tag }}"
+          fi
+
+      - name: List artifacts
+        run: |
+          echo "Windows artifacts:"
+          find artifacts/windows -type f || echo "No Windows artifacts found"
+          echo "macOS artifacts:"
+          find artifacts/macos -type f || echo "No macOS artifacts found"
+
+      - name: Prepare release files
+        run: |
+          # Copy Windows files
+          mkdir -p release-files
+          find artifacts/windows -type f \( -name "*.exe" -o -name "*.blockmap" \) -exec cp {} release-files/ \;
+          # Copy macOS files
+          find artifacts/macos -type f \( -name "*.dmg" -o -name "*.blockmap" \) -exec cp {} release-files/ \;
+          echo "Release files prepared:"
+          ls -lh release-files/
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.event.inputs.tag }}
+          name: Release ${{ github.event.inputs.version }}
+          body: |
+            ## Release ${{ github.event.inputs.version }}
+            
+            ${{ github.event.inputs.release_notes }}
+            
+            ### Downloads
+            
+            **Windows:**
+            - Installer: `Photo Management Setup ${{ github.event.inputs.version }}.exe`
+            - Portable: `Photo Management ${{ github.event.inputs.version }}.exe`
+            
+            **macOS:**
+            - DMG: `Photo Management-${{ github.event.inputs.version }}.dmg`
+          files: release-files/*
+          draft: false
+          prerelease: false
+          fail_on_unmatched_files: false
+
