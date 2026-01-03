@@ -111,8 +111,7 @@
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
-      "createStartMenuShortcut": true,
-      "compression": "normal"
+      "createStartMenuShortcut": true
     }
   }
 }
